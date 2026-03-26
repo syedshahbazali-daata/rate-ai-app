@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "A-Team Electricians",
+    "slug": "a-team-electricians",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#161a1d",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.ateamelectricians.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#161a1d"
+      },
+      "package": "com.ateamelectricians.app"
+    },
+    "plugins": [
+      "expo-font",
+      "expo-asset"
+    ],
+    "newArchEnabled": false
+  }
+}
