@@ -22,7 +22,7 @@ export const Logo: React.FC<LogoProps> = ({ width = 200, height, variant = 'defa
     <Image
       source={source}
       style={[styles.image, { width, height: resolvedHeight }]}
-      resizeMode="contain"
+      resizeMode="cover"
     />
   );
 };
