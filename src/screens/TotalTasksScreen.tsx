@@ -5,8 +5,10 @@ import {
   TouchableOpacity,
   FlatList,
   StyleSheet,
+  Alert,
 } from 'react-native';
-import { ArrowLeft, Plus, Trash2, ShoppingCart } from 'lucide-react-native';
+import { ArrowLeft, Plus, Trash2, ShoppingCart, Copy } from 'lucide-react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts, spacing, fontSize } from '../theme';
 import { useAppTheme } from '../context/AppTheme';
@@ -29,6 +31,32 @@ export default function TotalTasksScreen({
   const insets = useSafeAreaInsets();
   const { theme } = useAppTheme();
   const subtotal = cartItems.reduce((sum, item) => sum + item.task.price, 0);
+
+  const handleCopyOrders = async () => {
+    if (cartItems.length === 0) {
+      Alert.alert('Nothing to copy', 'Add tasks before copying.');
+      return;
+    }
+    const separator = '-'.repeat(54);
+    const lines: string[] = [];
+    cartItems.forEach((item) => {
+      const { task } = item;
+      lines.push(task.service_level.toUpperCase());
+      lines.push(`${task.task_code} ${task.task_name.toUpperCase()}`);
+      lines.push(task.task_name);
+      task.custom_handbook.split('\n').forEach((feature) => {
+        if (feature.trim()) lines.push(feature.trim());
+      });
+      lines.push('');
+      lines.push(`Price: $${task.price.toLocaleString()}`);
+      lines.push(`Warranty: ${task.warranty}`);
+      lines.push(separator);
+      lines.push('');
+    });
+    lines.push(`TOTAL: $${subtotal.toLocaleString()}`);
+    await Clipboard.setStringAsync(lines.join('\n'));
+    Alert.alert('Copied!', 'Order summary copied to clipboard.');
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -56,13 +84,22 @@ export default function TotalTasksScreen({
             Subtotal: <Text style={[styles.subtotalAmount, { color: theme.primary }]}>${subtotal.toLocaleString()}</Text>
           </Text>
         </View>
-        <TouchableOpacity
-          style={[styles.addMoreBtn, { backgroundColor: theme.primary }]}
-          onPress={onAddMore}
-          activeOpacity={0.8}
-        >
-          <Plus size={22} color={colors.white} />
-        </TouchableOpacity>
+        <View style={styles.subtotalActions}>
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: colors.brandBlack }]}
+            onPress={handleCopyOrders}
+            activeOpacity={0.8}
+          >
+            <Copy size={20} color={colors.white} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: theme.primary }]}
+            onPress={onAddMore}
+            activeOpacity={0.8}
+          >
+            <Plus size={22} color={colors.white} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Task list */}
@@ -182,6 +219,23 @@ const styles = StyleSheet.create({
   },
   subtotalAmount: {
     fontSize: fontSize.lg,
+  },
+  subtotalActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  actionBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 5,
   },
   addMoreBtn: {
     width: 44,

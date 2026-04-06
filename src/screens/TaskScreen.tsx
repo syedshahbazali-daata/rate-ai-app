@@ -8,7 +8,6 @@ import {
   StyleSheet,
   Switch,
 } from 'react-native';
-import { CheckCircle2 } from 'lucide-react-native';
 import { Header } from '../components/Header';
 import { MenuOverlay } from '../components/MenuOverlay';
 import { colors, fonts, spacing, fontSize } from '../theme';
@@ -138,16 +137,6 @@ export default function TaskScreen({
         keyExtractor={(_, index) => String(index)}
         style={[styles.taskList, isTechHandbookMode && styles.taskListHandbook]}
         contentContainerStyle={styles.taskListContent}
-        ListHeaderComponent={
-          !isTechHandbookMode ? (
-            <View style={styles.cloneHeader}>
-              <View style={[styles.cloneIconBox, { borderColor: theme.primary }]}>
-                <CheckCircle2 size={16} color={theme.primary} />
-              </View>
-              <Text style={styles.cloneText}>Clone and Edit this Menu</Text>
-            </View>
-          ) : null
-        }
         ListFooterComponent={
           <View style={styles.footerBtn}>
             <TouchableOpacity
