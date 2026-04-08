@@ -30,7 +30,7 @@ const GATE_SCRIPT = `
   (function () {
     var REAL_TITLE = 'Rate AI';
     var LS_KEY = 'ateam_access';
-    var FS_URL = 'https://firestore.googleapis.com/v1/projects/gen-lang-client-0799600946/databases/ai-studio-934be5ac-fb1f-47e7-a89d-cbc72af93b11/documents/settings/site?key=AIzaSyAXI8jFegj8rGK_rQ5xVZaSGajjQli3n0I';
+    var FS_URL = 'https://firestore.googleapis.com/v1/projects/gen-lang-client-0799600946/databases/ai-studio-934be5ac-fb1f-47e7-a89d-cbc72af93b11/documents/settings/site?key=__FIREBASE_API_KEY__';
     var FALLBACK_PW = 'rate123';
 
     function fetchPw(cb) {
@@ -123,6 +123,14 @@ html = html.replace(
 
 // 3. Inject gate style + script just before </head>
 html = html.replace('</head>', GATE_STYLE + GATE_SCRIPT + '\n</head>');
+
+// 4. Replace API key placeholder with env var
+const apiKey = process.env.FIREBASE_API_KEY;
+if (!apiKey) {
+  console.error('✗ FIREBASE_API_KEY environment variable is not set.');
+  process.exit(1);
+}
+html = html.replace('__FIREBASE_API_KEY__', apiKey);
 
 fs.writeFileSync(distHtml, html, 'utf8');
 console.log('✓ Password gate injected into dist/index.html');
