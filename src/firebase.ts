@@ -8,6 +8,9 @@ import {
   onAuthStateChanged,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
 } from 'firebase/auth';
 import {
   getFirestore,
@@ -63,6 +66,9 @@ export {
   onAuthStateChanged,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
   collection,
   doc,
   getDoc,

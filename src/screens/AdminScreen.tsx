@@ -29,6 +29,8 @@ import {
   RotateCcw,
   ChevronDown,
   Check,
+  Eye,
+  EyeOff,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts, spacing, fontSize, radius } from '../theme';
@@ -43,6 +45,7 @@ import { ColorPicker } from '../components/ColorPicker';
 import { AppUser, PricingData, Category, TaskGroup, Task } from '../types';
 import {
   db,
+  auth,
   collection,
   doc,
   getDoc,
@@ -52,6 +55,9 @@ import {
   serverTimestamp,
   deleteAuthUser,
   createOrLinkUser,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
 } from '../firebase';
 
 type AdminTab = 'categories' | 'task_groups' | 'tasks' | 'users';
@@ -470,6 +476,16 @@ export default function AdminScreen({
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
   const [sitePassword, setSitePassword] = useState('');
   const [sitePasswordSaving, setSitePasswordSaving] = useState(false);
+  const [adminCurrentPw, setAdminCurrentPw] = useState('');
+  const [adminNewPw, setAdminNewPw] = useState('');
+  const [adminConfirmPw, setAdminConfirmPw] = useState('');
+  const [adminPwSaving, setAdminPwSaving] = useState(false);
+  const [adminPwError, setAdminPwError] = useState<string | null>(null);
+  const [adminPwSuccess, setAdminPwSuccess] = useState(false);
+  const [showSitePw, setShowSitePw] = useState(false);
+  const [showAdminCurrentPw, setShowAdminCurrentPw] = useState(false);
+  const [showAdminNewPw, setShowAdminNewPw] = useState(false);
+  const [showAdminConfirmPw, setShowAdminConfirmPw] = useState(false);
 
   useEffect(() => {
     if (!isSettingsOpen) return;
@@ -493,6 +509,47 @@ export default function AdminScreen({
       Alert.alert('Error', 'Failed to save site password.');
     } finally {
       setSitePasswordSaving(false);
+    }
+  }
+
+  async function changeAdminPassword() {
+    setAdminPwError(null);
+    setAdminPwSuccess(false);
+    if (!adminCurrentPw || !adminNewPw || !adminConfirmPw) {
+      setAdminPwError('All fields are required.');
+      return;
+    }
+    if (adminNewPw !== adminConfirmPw) {
+      setAdminPwError('New passwords do not match.');
+      return;
+    }
+    if (adminNewPw.length < 6) {
+      setAdminPwError('New password must be at least 6 characters.');
+      return;
+    }
+    const user = auth.currentUser;
+    if (!user || !user.email) {
+      setAdminPwError('No authenticated admin user found.');
+      return;
+    }
+    setAdminPwSaving(true);
+    try {
+      const credential = EmailAuthProvider.credential(user.email, adminCurrentPw);
+      await reauthenticateWithCredential(user, credential);
+      await updatePassword(user, adminNewPw);
+      setAdminCurrentPw('');
+      setAdminNewPw('');
+      setAdminConfirmPw('');
+      setAdminPwSuccess(true);
+      setTimeout(() => setAdminPwSuccess(false), 4000);
+    } catch (e: any) {
+      if (e?.code === 'auth/wrong-password' || e?.code === 'auth/invalid-credential') {
+        setAdminPwError('Current password is incorrect.');
+      } else {
+        setAdminPwError('Failed to update password. Try again.');
+      }
+    } finally {
+      setAdminPwSaving(false);
     }
   }
 
@@ -1076,16 +1133,79 @@ export default function AdminScreen({
               {/* ── Site Password ───────────────────────────────────────── */}
               <Text style={styles.settingsSectionLabel}>SITE PASSWORD</Text>
               <View style={styles.sitePwRow}>
+                <View style={styles.pwFieldWrap}>
+                  <TextInput
+                    style={styles.sitePwInput}
+                    value={sitePassword}
+                    onChangeText={setSitePassword}
+                    placeholder="Enter new password"
+                    secureTextEntry={!showSitePw}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity style={styles.pwEyeBtn} onPress={() => setShowSitePw(v => !v)}>
+                    {showSitePw ? <EyeOff size={18} color={colors.brandBlack + '88'} /> : <Eye size={18} color={colors.brandBlack + '88'} />}
+                  </TouchableOpacity>
+                </View>
+                <SaveButton label="SAVE" onPress={saveSitePassword} isSubmitting={sitePasswordSaving} />
+              </View>
+
+              {/* ── Admin Login Password ─────────────────────────────────── */}
+              <Text style={styles.settingsSectionLabel}>ADMIN LOGIN PASSWORD</Text>
+              {!!adminPwError && (
+                <View style={styles.adminPwAlert}>
+                  <Text style={styles.adminPwAlertText}>{adminPwError}</Text>
+                </View>
+              )}
+              {adminPwSuccess && (
+                <View style={styles.adminPwSuccess}>
+                  <Text style={styles.adminPwSuccessText}>Password updated successfully.</Text>
+                </View>
+              )}
+              <View style={[styles.pwFieldWrap, { marginBottom: spacing.sm }]}>
                 <TextInput
                   style={styles.sitePwInput}
-                  value={sitePassword}
-                  onChangeText={setSitePassword}
-                  placeholder="Enter new password"
-                  secureTextEntry
+                  value={adminCurrentPw}
+                  onChangeText={setAdminCurrentPw}
+                  placeholder="Current password"
+                  secureTextEntry={!showAdminCurrentPw}
                   autoCapitalize="none"
                   autoCorrect={false}
                 />
-                <SaveButton label="SAVE" onPress={saveSitePassword} isSubmitting={sitePasswordSaving} />
+                <TouchableOpacity style={styles.pwEyeBtn} onPress={() => setShowAdminCurrentPw(v => !v)}>
+                  {showAdminCurrentPw ? <EyeOff size={18} color={colors.brandBlack + '88'} /> : <Eye size={18} color={colors.brandBlack + '88'} />}
+                </TouchableOpacity>
+              </View>
+              <View style={[styles.pwFieldWrap, { marginBottom: spacing.sm }]}>
+                <TextInput
+                  style={styles.sitePwInput}
+                  value={adminNewPw}
+                  onChangeText={setAdminNewPw}
+                  placeholder="New password"
+                  secureTextEntry={!showAdminNewPw}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <TouchableOpacity style={styles.pwEyeBtn} onPress={() => setShowAdminNewPw(v => !v)}>
+                  {showAdminNewPw ? <EyeOff size={18} color={colors.brandBlack + '88'} /> : <Eye size={18} color={colors.brandBlack + '88'} />}
+                </TouchableOpacity>
+              </View>
+              <View style={styles.sitePwRow}>
+                <View style={styles.pwFieldWrap}>
+                  <TextInput
+                    style={styles.sitePwInput}
+                    value={adminConfirmPw}
+                    onChangeText={setAdminConfirmPw}
+                    placeholder="Confirm new password"
+                    secureTextEntry={!showAdminConfirmPw}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity style={styles.pwEyeBtn} onPress={() => setShowAdminConfirmPw(v => !v)}>
+                    {showAdminConfirmPw ? <EyeOff size={18} color={colors.brandBlack + '88'} /> : <Eye size={18} color={colors.brandBlack + '88'} />}
+                  </TouchableOpacity>
+                </View>
+                <SaveButton label="SAVE" onPress={changeAdminPassword} isSubmitting={adminPwSaving} />
               </View>
             </ScrollView>
           </View>
@@ -1699,17 +1819,52 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing['3xl'],
   },
-  sitePwInput: {
+  pwFieldWrap: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1.5,
     borderColor: colors.brandBlack + '33',
     borderRadius: radius.lg,
+    backgroundColor: colors.white,
+    overflow: 'hidden',
+  },
+  sitePwInput: {
+    flex: 1,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
     fontFamily: fonts.sans,
     fontSize: fontSize.sm,
     color: colors.brandBlack,
-    backgroundColor: colors.white,
+    backgroundColor: 'transparent',
+  },
+  pwEyeBtn: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  adminPwAlert: {
+    backgroundColor: '#FEE2E2',
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  adminPwAlertText: {
+    fontFamily: fonts.sans,
+    fontSize: fontSize.sm,
+    color: '#B91C1C',
+  },
+  adminPwSuccess: {
+    backgroundColor: '#D1FAE5',
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  adminPwSuccessText: {
+    fontFamily: fonts.sans,
+    fontSize: fontSize.sm,
+    color: '#065F46',
   },
 
   // ── Level count stepper (Task Group form) ────────────────────────────────────
